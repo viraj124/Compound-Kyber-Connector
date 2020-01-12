@@ -43,6 +43,25 @@ contract Helper {
     function getAddressAdmin() public pure returns (address admin) {
         admin = 0xB5034418f6Cc1fd494535F2D38F770C9827f88A1;
     }
+    
+    /**
+     * @dev get ceth address
+    */
+    function getCETH() public pure returns (address ceth) {
+        ceth = 0xf92FbE0D3C0dcDAE407923b2Ac17eC223b1084E4;
+    }
+     /**
+     * @dev get cdai address
+     */
+    function getCDAI() public pure returns (address cdai) {
+        cdai = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
+    }
+     /**
+     * @dev get comptroller address
+     */
+    function getComptroller() public pure returns (address comptroller) {
+        comptroller = 0x1f5D7F3CaAC149fE41b8bd62A3673FE6eC0AB73b;
+    }
 
     /**
      * @dev gets ETH & token balance
@@ -155,7 +174,7 @@ interface IERC20 {
      *
      * Emits an {Approval} event.
      */
-    function approve(address spender, uint256 amount) external returns (bool);
+    function approve(address spender, uint amount) external returns (bool);
 
     /**
      * @dev Moves `amount` tokens from `sender` to `recipient` using the
@@ -185,142 +204,66 @@ interface IERC20 {
 
 
 interface CTokenInterface {
-        function mint() external payable;
-        
            /**
      * @notice Send Ether to CEther to mint
      */
-        function () external payable;
+        function mint() external payable;
         
         function borrow(uint borrowAmount) external returns (uint);
         
-        function repayBorrow(uint repayAmount) external returns (uint);
-        
-        function redeemUnderlying(uint redeemAmount) external returns (uint);
-
+        function underlying() external view returns (address);
 
 }
 
 
 interface ComptrollerInterface {
-    /**
-     * @notice Marker function used for light validation when updating the comptroller of a market
-     * @dev Implementations should simply return true.
-     * @return true
-     */
-    function isComptroller() external view returns (bool);
-
     /*** Assets You Are In ***/
 
     function enterMarkets(address[] calldata cTokens) external returns (uint[] memory);
     function exitMarket(address cToken) external returns (uint);
 
-    /*** Policy Hooks ***/
 
-    function mintAllowed(address cToken, address minter, uint mintAmount) external returns (uint);
-    function mintVerify(address cToken, address minter, uint mintAmount, uint mintTokens) external;
-
-    function redeemAllowed(address cToken, address redeemer, uint redeemTokens) external returns (uint);
-    function redeemVerify(address cToken, address redeemer, uint redeemAmount, uint redeemTokens) external;
-
-    function borrowAllowed(address cToken, address borrower, uint borrowAmount) external returns (uint);
-    function borrowVerify(address cToken, address borrower, uint borrowAmount) external;
-
-    function repayBorrowAllowed(
-        address cToken,
-        address payer,
-        address borrower,
-        uint repayAmount) external returns (uint);
-    function repayBorrowVerify(
-        address cToken,
-        address payer,
-        address borrower,
-        uint repayAmount,
-        uint borrowerIndex) external;
-
-    function liquidateBorrowAllowed(
-        address cTokenBorrowed,
-        address cTokenCollateral,
-        address liquidator,
-        address borrower,
-        uint repayAmount) external returns (uint);
-    function liquidateBorrowVerify(
-        address cTokenBorrowed,
-        address cTokenCollateral,
-        address liquidator,
-        address borrower,
-        uint repayAmount,
-        uint seizeTokens) external;
-
-    function seizeAllowed(
-        address cTokenCollateral,
-        address cTokenBorrowed,
-        address liquidator,
-        address borrower,
-        uint seizeTokens) external returns (uint);
-    function seizeVerify(
-        address cTokenCollateral,
-        address cTokenBorrowed,
-        address liquidator,
-        address borrower,
-        uint seizeTokens) external;
-
-    function transferAllowed(address cToken, address src, address dst, uint transferTokens) external returns (uint);
-    function transferVerify(address cToken, address src, address dst, uint transferTokens) external;
-
-    /*** Liquidity/Liquidation Calculations ***/
-
-    function liquidateCalculateSeizeTokens(
-        address cTokenBorrowed,
-        address cTokenCollateral,
-        uint repayAmount) external view returns (uint, uint);
 }
 contract Connector is Helper {
     
-    
-    function approve(address spender, uint256 amount) external returns (bool) {
-        return IERC20(0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa).approve(spender, amount);
-    }
-    
-
-    function mint() external payable {
-        CTokenInterface(0xf92FbE0D3C0dcDAE407923b2Ac17eC223b1084E4).mint.value(msg.value)();
-    }
-    
-        function borrow(uint borrowAmount) external returns (uint) {
-            uint amt = CTokenInterface(0xe7bc397DBd069fC7d0109C0636d06888bb50668c).borrow(borrowAmount);
-            return amt;
-        }
-        
-    function enterMarkets(address[] calldata cTokens) external returns (uint[] memory) {
-        uint[] memory amt = ComptrollerInterface(0x1f5D7F3CaAC149fE41b8bd62A3673FE6eC0AB73b).enterMarkets(cTokens);
-        return amt;
-    }
-    
-    /**
-     * @dev buying token where destAmt is fixed
+     /**
+     * @dev levergae functionality to lock more collateral
      * @param src - token to sell
      * @param dest - token to buy
      * @param srcAmt - token amount to sell
      * @param maxDestAmt is the max amount of token to be bought
+     * @param slippageRate
+     * @param maxAmount - The max amount of src you want to approve kyber to spend since it's delegated call
+     * @param markets - The token Markets you wish to enter in Compound
      */
-    function buy(
+    function leverage(
         address src,
         address dest,
         uint srcAmt,
         uint maxDestAmt,
-        uint slippageRate
-    ) public payable returns (uint destAmt)
-    {
-
-        destAmt = KyberInterface(getAddressKyber()).trade.value(msg.value)(
-            src,
-            srcAmt,
-            dest,
-            msg.sender,
-            maxDestAmt,
-            slippageRate,
-            getAddressAdmin()
-        );
-    }
+        uint slippageRate,
+        uint maxAmount,
+        address[] memory markets) public payable returns (uint destAmt)
+        {
+             CTokenInterface(getCETH()).mint.value(msg.value)();
+             
+             uint[] memory tokenMarkets = ComptrollerInterface(getComptroller()).enterMarkets(markets);
+             
+             uint amt = CTokenInterface(getCDAI()).borrow(srcAmt);
+             
+             address underlyingDai = CTokenInterface(getCDAI()).underlying();
+             
+             bool isApproved = IERC20(underlyingDai).approve(getAddressKyber(), maxAmount);
+             
+             destAmt = KyberInterface(getAddressKyber()).trade.value(0)(
+                        src,
+                        srcAmt,
+                        dest,
+                        msg.sender,
+                        maxDestAmt,
+                        slippageRate,
+                        getAddressAdmin()
+                    );
+            CTokenInterface(getCETH()).mint.value(destAmt)();
+        }
 }
