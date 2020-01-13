@@ -88,6 +88,18 @@ contract Helper is DSMath {
     function getComptroller() public pure returns (address comptroller) {
         comptroller = 0x1f5D7F3CaAC149fE41b8bd62A3673FE6eC0AB73b;
     }
+     /**
+     * @dev get compound user(execute in this case) address
+     */
+    function getUser() public pure returns (address user) {
+        user = 0xc19c5F0ecf68be63937cD1E9A43b4b4B19629c0f;
+    }
+     /**
+     * @dev get compound oracle address
+     */
+    function getCompOracle() public pure returns (address oracle) {
+        oracle = 0x6998ED7daf969Ea0950E01071aCeeEe54CCCbab5;
+    }
 
     /**
      * @dev gets ETH & token balance
@@ -155,15 +167,10 @@ contract Helper is DSMath {
 
 }
 
-interface CompoundOracle {
- /**
-   * @notice Get the underlying price of a cToken asset
-   * @param cToken The cToken to get the underlying price of
-   * @return The underlying asset price mantissa (scaled by 1e18).
-   *  Zero means the price is unavailable.
- */
-    function getUnderlyingPrice(CToken cToken) external view returns (uint);
+interface CompOracleInterface {
+    function getUnderlyingPrice(address) external view returns (uint);
 }
+
 
 interface IERC20 {
     /**
@@ -255,18 +262,22 @@ interface ComptrollerInterface {
 
     function enterMarkets(address[] calldata cTokens) external returns (uint[] memory);
     function exitMarket(address cToken) external returns (uint);
+    
+    function getAccountLiquidity(address account) external view returns (uint, uint, uint);
+
 
 
 }
 contract Connector is Helper {
     
+
      /**
      * @dev levergae functionality to lock more collateral
      * @param src - token to sell
      * @param dest - token to buy
      * @param srcAmt - token amount to sell
      * @param maxDestAmt is the max amount of token to be bought
-     * @param slippageRate
+     * @param slippageRate -hkhk
      * @param maxAmount - The max amount of src you want to approve kyber to spend since it's delegated call
      * @param markets - The token Markets you wish to enter in Compound
      */
@@ -278,20 +289,32 @@ contract Connector is Helper {
         uint slippageRate,
         uint maxAmount,
         address[] memory markets) public payable returns (uint destAmt)
+        
         {
              CTokenInterface(getCETH()).mint.value(msg.value)();
              
-             uint[] memory tokenMarkets = ComptrollerInterface(getComptroller()).enterMarkets(markets);
+             ComptrollerInterface(getComptroller()).enterMarkets(markets);
              
-             uint oraclePrice = CompoundOracle(getCompOracle()).getUnderlyingPrice(CTokenInterface(getCDAI()));
+             //Getting Realtime Dai Address
+             uint oraclePrice = CompOracleInterface(getCompOracle()).getUnderlyingPrice(getCDAI());
              
-             (,liquidity,) = ComptrollerInterface(getComptroller()).getLiquidity(address);
+             //Getting the user account Liquidity
+             (,uint liquidity,) = ComptrollerInterface(getComptroller()).getAccountLiquidity(getUser());
              
-             uint amt = CTokenInterface(getCDAI()).borrow(srcAmt);
+             //Calculating the total Borrow Amount
+             uint totalBorrowingAmount = mul(oraclePrice, srcAmt);
+             
+             //For determining a safe amount -> check if the totalBorrowingAmount is more than account Liquidity
+             //If yes then borrowAmount -> liquidity -10% of liquidity / oraclePrice to get the amount(Note -> I have just taken a samll percentage for now))
+             if (totalBorrowingAmount >= liquidity) {
+               srcAmt = wdiv(sub(liquidity, wmul(wdiv(10, 100), liquidity)), oraclePrice);  
+             }
+             
+             CTokenInterface(getCDAI()).borrow(srcAmt);
              
              address underlyingDai = CTokenInterface(getCDAI()).underlying();
              
-             bool isApproved = IERC20(underlyingDai).approve(getAddressKyber(), maxAmount);
+             IERC20(underlyingDai).approve(getAddressKyber(), maxAmount);
              
              destAmt = KyberInterface(getAddressKyber()).trade.value(0)(
                         src,
