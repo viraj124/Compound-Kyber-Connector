@@ -76,10 +76,10 @@ var kyber_compound_leverage = {
       "stateMutability": "payable",
       "type": "function"
     };
-    var kyber_compound_leverage_args = [
+      var kyber_compound_leverage_args = [
       '0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa',
       '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-      "1000000000000000000",
+      "100000000000000000000",
       "10000000000000000",
       1,
       "100000000000000000000000000000000000000",
