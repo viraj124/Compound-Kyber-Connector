@@ -20,8 +20,34 @@ contract KyberInterface {
         ) public view returns (uint, uint);
 }
 
+contract DSMath {
 
-contract Helper {
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, "math-not-safe");
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        z = x - y <= x ? x - y : 0;
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, "math-not-safe");
+    }
+
+    uint constant WAD = 10 ** 18;
+
+    function wmul(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, y), WAD / 2) / WAD;
+    }
+
+    function wdiv(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, WAD), y / 2) / y;
+    }
+
+}
+
+
+contract Helper is DSMath {
 
     /**
      * @dev get ethereum address for trade
@@ -129,7 +155,15 @@ contract Helper {
 
 }
 
-
+interface CompoundOracle {
+ /**
+   * @notice Get the underlying price of a cToken asset
+   * @param cToken The cToken to get the underlying price of
+   * @return The underlying asset price mantissa (scaled by 1e18).
+   *  Zero means the price is unavailable.
+ */
+    function getUnderlyingPrice(CToken cToken) external view returns (uint);
+}
 
 interface IERC20 {
     /**
@@ -248,6 +282,10 @@ contract Connector is Helper {
              CTokenInterface(getCETH()).mint.value(msg.value)();
              
              uint[] memory tokenMarkets = ComptrollerInterface(getComptroller()).enterMarkets(markets);
+             
+             uint oraclePrice = CompoundOracle(getCompOracle()).getUnderlyingPrice(CTokenInterface(getCDAI()));
+             
+             (,liquidity,) = ComptrollerInterface(getComptroller()).getLiquidity(address);
              
              uint amt = CTokenInterface(getCDAI()).borrow(srcAmt);
              
