@@ -1,7 +1,6 @@
 pragma solidity ^0.5.7;
 
 
-
 contract KyberInterface {
     function trade(
         address src,
@@ -272,7 +271,7 @@ contract Connector is Helper {
     
 
      /**
-     * @dev levergae functionality to lock more collateral
+     * @dev leverage functionality to lock more collateral
      * @param src - token to sell
      * @param dest - token to buy
      * @param srcAmt - token amount to sell
@@ -326,5 +325,38 @@ contract Connector is Helper {
                         getAddressAdmin()
                     );
             CTokenInterface(getCETH()).mint.value(destAmt)();
+        }
+        
+     /**
+     * @dev save functionality to save your compound position from liquidation
+     * @param src - token to sell
+     * @param dest - token to buy
+     * @param srcAmt - token amount to sell
+     * @param maxDestAmt is the max amount of token to be bought
+     * @param slippageRate 
+     * @param maxAmount - The max amount of src you want to approve kyber to spend since it's delegated call
+     * @param markets - The token Markets you wish to enter in Compound
+     */
+    function save(
+        address src,
+        address dest,
+        uint srcAmt,
+        uint maxDestAmt,
+        uint slippageRate,
+        uint maxAmount,
+        address[] memory markets) public payable returns (uint destAmt)
+        
+        {
+            uint redeemTokens = CTokenInterface(getCETH()).redeem(srcAmt);
+            daiAmt = KyberInterface(getAddressKyber()).trade.value(redeemTokens)(
+                        src,
+                        srcAmt,
+                        dest,
+                        msg.sender,
+                        maxDestAmt,
+                        slippageRate,
+                        getAddressAdmin()
+                    );
+            uint result = CTokenInterface(getCDAI()).repayBorrow(daiAmt);
         }
 }
