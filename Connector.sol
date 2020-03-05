@@ -1,6 +1,7 @@
 pragma solidity ^0.5.7;
 
 
+
 contract KyberInterface {
     function trade(
         address src,
@@ -251,6 +252,10 @@ interface CTokenInterface {
         
         function borrow(uint borrowAmount) external returns (uint);
         
+        function redeem(uint redeemTokens) external returns (uint);
+        
+        function repayBorrow(uint repayAmount) external returns (uint);
+        
         function underlying() external view returns (address);
 
 }
@@ -271,7 +276,7 @@ contract Connector is Helper {
     
 
      /**
-     * @dev leverage functionality to lock more collateral
+     * @dev levergae functionality to lock more collateral
      * @param src - token to sell
      * @param dest - token to buy
      * @param srcAmt - token amount to sell
@@ -287,7 +292,7 @@ contract Connector is Helper {
         uint maxDestAmt,
         uint slippageRate,
         uint maxAmount,
-        address[] memory markets) public payable returns (uint destAmt)
+        address[] memory markets) public payable
         
         {
              CTokenInterface(getCETH()).mint.value(msg.value)();
@@ -315,7 +320,7 @@ contract Connector is Helper {
              
              IERC20(underlyingDai).approve(getAddressKyber(), maxAmount);
              
-             destAmt = KyberInterface(getAddressKyber()).trade.value(0)(
+             uint destAmt = KyberInterface(getAddressKyber()).trade.value(0)(
                         src,
                         srcAmt,
                         dest,
@@ -327,28 +332,25 @@ contract Connector is Helper {
             CTokenInterface(getCETH()).mint.value(destAmt)();
         }
         
-     /**
+        /**
      * @dev save functionality to save your compound position from liquidation
      * @param src - token to sell
      * @param dest - token to buy
      * @param srcAmt - token amount to sell
      * @param maxDestAmt is the max amount of token to be bought
-     * @param slippageRate 
-     * @param maxAmount - The max amount of src you want to approve kyber to spend since it's delegated call
-     * @param markets - The token Markets you wish to enter in Compound
+     * @param slippageRate - counter exchange rate flucuation
      */
     function save(
         address src,
         address dest,
         uint srcAmt,
         uint maxDestAmt,
-        uint slippageRate,
-        uint maxAmount,
-        address[] memory markets) public payable returns (uint destAmt)
+        uint slippageRate
+        ) public payable
         
         {
             uint redeemTokens = CTokenInterface(getCETH()).redeem(srcAmt);
-            daiAmt = KyberInterface(getAddressKyber()).trade.value(redeemTokens)(
+            uint daiAmt = KyberInterface(getAddressKyber()).trade.value(redeemTokens)(
                         src,
                         srcAmt,
                         dest,
@@ -357,6 +359,7 @@ contract Connector is Helper {
                         slippageRate,
                         getAddressAdmin()
                     );
-            uint result = CTokenInterface(getCDAI()).repayBorrow(daiAmt);
+            CTokenInterface(getCDAI()).repayBorrow(daiAmt);
         }
+        
 }
