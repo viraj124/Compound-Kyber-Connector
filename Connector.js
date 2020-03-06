@@ -86,8 +86,54 @@ var kyber_compound_leverage = {
       ["0xe7bc397dbd069fc7d0109c0636d06888bb50668c", "0xf92fbe0d3c0dcdae407923b2ac17ec223b1084e4"]
   ]
 
-    const data = await web3.eth.abi.encodeFunctionCall(kyber_compound_leverage, kyber_compound_leverage_args)
-    console.log(data)
+    const leverageData = await web3.eth.abi.encodeFunctionCall(kyber_compound_leverage, kyber_compound_leverage_args)
+    console.log(leverageData)
+    
+    var kyber_compound_save = {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "src",
+          "type": "address"
+        },
+        {
+          "name": "dest",
+          "type": "address"
+        },
+        {
+          "name": "srcAmt",
+          "type": "uint256"
+        },
+        {
+          "name": "maxDestAmt",
+          "type": "uint256"
+        },
+        {
+          "name": "slippageRate",
+          "type": "uint256"
+        },
+        {
+          "name": "markets",
+          "type": "address[]"
+        }
+      ],
+      "name": "save",
+      "outputs": [],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    };
+      var kyber_compound_save_args = [
+      '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      '0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa',
+      "100000000",
+      "10000000000000000",
+      1,
+      ["0xe7bc397dbd069fc7d0109c0636d06888bb50668c"]
+  ]
+
+    const saveData = await web3.eth.abi.encodeFunctionCall(kyber_compound_save, kyber_compound_save_args)
+    console.log(saveData)
   }
 
   render() {
