@@ -100,71 +100,6 @@ contract Helper is DSMath {
     function getCompOracle() public pure returns (address oracle) {
         oracle = 0x6998ED7daf969Ea0950E01071aCeeEe54CCCbab5;
     }
-
-    /**
-     * @dev gets ETH & token balance
-     * @param src is the token being sold
-     * @return ethBal - if not erc20, eth balance
-     * @return tknBal - if not eth, erc20 balance
-     */
-    function getBal(address src, address _owner) public view returns (uint, uint) {
-        uint tknBal;
-        if (src != getAddressETH()) {
-            tknBal = IERC20(src).balanceOf(address(_owner));
-        }
-        return (address(_owner).balance, tknBal);
-    }
-
-    /**
-     * @dev getting rates from Kyber
-     * @param src is the token being sold
-     * @param dest is the token being bought
-     * @param srcAmt is the amount of token being sold
-     * @return expectedRate - the current rate
-     * @return slippageRate - rate with 3% slippage
-     */
-    function getExpectedRate(
-        address src,
-        address dest,
-        uint srcAmt
-    ) public view returns (
-        uint expectedRate,
-        uint slippageRate
-    )
-    {
-        (expectedRate,) = KyberInterface(getAddressKyber()).getExpectedRate(src, dest, srcAmt);
-        slippageRate = (expectedRate / 100) * 99; // changing slippage rate upto 99%
-    }
-
-    /**
-     * @dev fetching token from the trader if ERC20
-     * @param trader is the trader
-     * @param src is the token which is being sold
-     * @param srcAmt is the amount of token being sold
-     */
-    function getToken(address trader, address src, uint srcAmt) internal returns (uint ethQty) {
-        if (src == getAddressETH()) {
-            require(msg.value == srcAmt, "not-enough-src");
-            ethQty = srcAmt;
-        } else {
-            IERC20 tknContract = IERC20(src);
-            setApproval(tknContract, srcAmt);
-            tknContract.transferFrom(trader, address(this), srcAmt);
-        }
-    }
-
-    /**
-     * @dev setting allowance to kyber for the "user proxy" if required
-     * @param tknContract is the token
-     * @param srcAmt is the amount of token to sell
-     */
-    function setApproval(IERC20 tknContract, uint srcAmt) internal returns (uint) {
-        uint tokenAllowance = tknContract.allowance(address(this), getAddressKyber());
-        if (srcAmt > tokenAllowance) {
-            tknContract.approve(getAddressKyber(), 2**255);
-        }
-    }
-
 }
 
 interface CompOracleInterface {
@@ -338,20 +273,19 @@ contract Connector is Helper {
      * @param dest - token to buy
      * @param srcAmt - token amount to sell
      * @param maxDestAmt is the max amount of token to be bought
-     * @param slippageRate - counter exchange rate flucuation
      */
     function save(
         address src,
         address dest,
         uint srcAmt,
         uint maxDestAmt,
-        uint slippageRate,
         address[] memory markets
         ) public payable
         
         {
             CTokenInterface(getCETH()).mint.value(msg.value)();
             CTokenInterface(getCETH()).redeem(srcAmt);
+            (, uint slippageRate) = KyberInterface(getAddressKyber()).getExpectedRate(src, dest, msg.value);
             uint daiAmt = KyberInterface(getAddressKyber()).trade.value(msg.value)(
                         src,
                         msg.value,
@@ -366,4 +300,3 @@ contract Connector is Helper {
         }
         
 }
-
