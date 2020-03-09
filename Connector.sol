@@ -18,6 +18,7 @@ contract KyberInterface {
         address dest,
         uint srcQty
         ) public view returns (uint, uint);
+        
 }
 
 contract DSMath {
@@ -99,6 +100,12 @@ contract Helper is DSMath {
      */
     function getCompOracle() public pure returns (address oracle) {
         oracle = 0x6998ED7daf969Ea0950E01071aCeeEe54CCCbab5;
+    }
+    /**
+     * @dev get owner address
+     */
+    function getOwner() public pure returns (address owner) {
+        owner = 0xc19c5F0ecf68be63937cD1E9A43b4b4B19629c0f;
     }
 }
 
@@ -187,12 +194,15 @@ interface CTokenInterface {
         
         function borrow(uint borrowAmount) external returns (uint);
         
+        function balanceOf(address owner) external view returns (uint);
+
         function redeem(uint redeemTokens) external returns (uint);
         
         function repayBorrow(uint repayAmount) external returns (uint);
         
         function underlying() external view returns (address);
-
+        
+        function redeemUnderlying(uint redeemAmount) external returns (uint);
 }
 
 
@@ -283,13 +293,14 @@ contract Connector is Helper {
         ) public payable
         
         {
-            ComptrollerInterface(getComptroller()).enterMarkets(markets);
             CTokenInterface(getCETH()).mint.value(msg.value)();
-            CTokenInterface(getCETH()).redeem(srcAmt);
-            (, uint slippageRate) = KyberInterface(getAddressKyber()).getExpectedRate(src, dest, msg.value);
-            uint daiAmt = KyberInterface(getAddressKyber()).trade.value(msg.value)(
+            //since redeemAmt has to be lower
+            ComptrollerInterface(getComptroller()).enterMarkets(markets);
+            CTokenInterface(getCETH()).redeemUnderlying(srcAmt);
+            (, uint slippageRate) = KyberInterface(getAddressKyber()).getExpectedRate(src, dest, srcAmt);
+            uint daiAmt = KyberInterface(getAddressKyber()).trade.value(srcAmt)(
                         src,
-                        msg.value,
+                        srcAmt,
                         dest,
                         msg.sender,
                         maxDestAmt,
@@ -300,3 +311,4 @@ contract Connector is Helper {
         }
         
 }
+
