@@ -290,13 +290,13 @@ contract Connector is Helper {
         uint srcAmt,
         uint maxDestAmt,
         address[] memory markets
-        ) public payable
+        ) public
         
         {
-            CTokenInterface(getCETH()).mint.value(msg.value)();
+            // CTokenInterface(getCETH()).mint.value(msg.value)();
             //since redeemAmt has to be lower
             ComptrollerInterface(getComptroller()).enterMarkets(markets);
-            CTokenInterface(getCETH()).redeemUnderlying(srcAmt);
+            CTokenInterface(getCETH()).redeem(srcAmt);
             (, uint slippageRate) = KyberInterface(getAddressKyber()).getExpectedRate(src, dest, srcAmt);
             uint daiAmt = KyberInterface(getAddressKyber()).trade.value(srcAmt)(
                         src,
