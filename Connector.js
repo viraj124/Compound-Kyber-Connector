@@ -89,7 +89,7 @@ var kyber_compound_leverage = {
     const leverageData = await web3.eth.abi.encodeFunctionCall(kyber_compound_leverage, kyber_compound_leverage_args)
     console.log(leverageData)
     
-    var kyber_compound_save = {
+var kyber_compound_save = {
       "constant": false,
       "inputs": [
         {
@@ -109,10 +109,6 @@ var kyber_compound_leverage = {
           "type": "uint256"
         },
         {
-          "name": "slippageRate",
-          "type": "uint256"
-        },
-        {
           "name": "markets",
           "type": "address[]"
         }
@@ -126,12 +122,10 @@ var kyber_compound_leverage = {
       var kyber_compound_save_args = [
       '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
       '0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa',
-      "100000000",
-      "10000000000000000",
-      1,
-      ["0xe7bc397dbd069fc7d0109c0636d06888bb50668c"]
+      "100",
+      "1000000",
+      ["0xe7bc397dbd069fc7d0109c0636d06888bb50668c", "0xf92fbe0d3c0dcdae407923b2ac17ec223b1084e4"]
   ]
-
     const saveData = await web3.eth.abi.encodeFunctionCall(kyber_compound_save, kyber_compound_save_args)
     console.log(saveData)
   }
