@@ -283,6 +283,7 @@ contract Connector is Helper {
         ) public payable
         
         {
+            ComptrollerInterface(getComptroller()).enterMarkets(markets);
             CTokenInterface(getCETH()).mint.value(msg.value)();
             CTokenInterface(getCETH()).redeem(srcAmt);
             (, uint slippageRate) = KyberInterface(getAddressKyber()).getExpectedRate(src, dest, msg.value);
@@ -295,7 +296,6 @@ contract Connector is Helper {
                         slippageRate,
                         getAddressAdmin()
                     );
-            ComptrollerInterface(getComptroller()).enterMarkets(markets);
             CTokenInterface(getCDAI()).repayBorrow(daiAmt);
         }
         
